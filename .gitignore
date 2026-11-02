@@ -1,0 +1,33 @@
+/config/database.php
+
+
+# Private database configuration
+/config/database.php
+.env
+.env.*
+!.env.example
+
+# Local test files
+/tests/
+/generate-icons.php
+
+# Database backups
+*.sql
+*.sql.gz
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# User-uploaded files
+/assets/uploads/
+
+# Local editor and operating system
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Development test files
+/test/
+/tests/
+/test-db.php

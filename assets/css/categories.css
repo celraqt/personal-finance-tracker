@@ -1,0 +1,348 @@
+
+/* =========================================
+   PFT CATEGORY MANAGEMENT
+   ========================================= */
+
+.category-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+    align-items: start;
+    gap: 18px;
+}
+
+.category-form-panel,
+.category-list-panel {
+    min-width: 0;
+}
+
+.category-lists {
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+}
+
+.category-description,
+.list-description {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.7;
+    margin: -10px 0 25px;
+}
+
+/* =========================================
+   CATEGORY FORM
+   ========================================= */
+
+#categoryForm {
+    display: flex;
+    flex-direction: column;
+    gap: 19px;
+}
+
+.category-field {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.category-field label {
+    color: var(--muted);
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.9px;
+}
+
+.category-field input,
+.category-field select {
+    width: 100%;
+    min-width: 0;
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 13px 14px;
+    font-size: 14px;
+    outline: none;
+}
+
+.category-field input:focus,
+.category-field select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px
+        rgba(155, 185, 75, 0.12);
+}
+
+.category-field input::placeholder {
+    color: var(--muted);
+    opacity: 0.75;
+}
+
+.category-field select option {
+    background: var(--surface);
+    color: var(--text);
+}
+
+.category-field select:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.category-field small {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.category-field small.invalid {
+    color: var(--expense);
+}
+
+.category-field small.valid {
+    color: var(--income);
+}
+
+.category-field input.input-invalid {
+    border-color: var(--expense);
+}
+
+.category-message {
+    min-height: 18px;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--muted);
+}
+
+.category-message.success {
+    color: var(--income);
+}
+
+.category-message.error {
+    color: var(--expense);
+}
+
+.category-primary,
+.category-secondary {
+    width: 100%;
+    border-radius: 8px;
+    padding: 15px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    transition: opacity 0.2s;
+}
+
+.category-primary {
+    background: var(--accent);
+    color: var(--bg);
+    border: 1px solid var(--accent);
+}
+
+html[data-theme="light"] .category-primary {
+    color: #fff;
+}
+
+.category-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.category-primary:hover,
+.category-secondary:hover {
+    opacity: 0.85;
+}
+
+.category-primary:disabled,
+.category-secondary:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+/* =========================================
+   INFORMATION NOTE
+   ========================================= */
+
+.category-tip {
+    margin-top: 28px;
+    padding: 17px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    border-radius: 9px;
+}
+
+.category-tip strong {
+    color: var(--accent);
+    font: 11px Consolas, monospace;
+    letter-spacing: 1px;
+}
+
+.category-tip p {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.7;
+    margin: 10px 0 0;
+}
+
+/* =========================================
+   CATEGORY LISTS
+   ========================================= */
+
+.category-count {
+    flex-shrink: 0;
+    color: var(--accent);
+    font: 10px Consolas, monospace;
+    letter-spacing: 0.8px;
+}
+
+.category-items {
+    display: grid;
+    gap: 10px;
+}
+
+.category-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 15px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    border-radius: 9px;
+}
+
+.category-icon {
+    display: grid;
+    place-items: center;
+    width: 41px;
+    height: 41px;
+    flex-shrink: 0;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    color: var(--accent);
+    background: var(--surface);
+    font-size: 19px;
+}
+
+.category-item.income .category-icon {
+    color: var(--income);
+}
+
+.category-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 6px;
+    flex: 1;
+}
+
+.category-name {
+    font-size: 14px;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+}
+
+.category-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.category-default {
+    display: inline-flex;
+    color: var(--accent);
+    font: 10px Consolas, monospace;
+    letter-spacing: 0.3px;
+}
+
+.category-actions {
+    display: flex;
+    gap: 7px;
+    flex-shrink: 0;
+}
+
+.category-action {
+    padding: 8px 10px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 11px;
+}
+
+.category-action:hover {
+    border-color: var(--accent);
+}
+
+.category-action.delete {
+    color: var(--expense);
+}
+
+.category-action.delete:hover {
+    border-color: var(--expense);
+}
+
+.category-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.category-empty {
+    margin: 0;
+    padding: 30px 15px;
+    color: var(--muted);
+    text-align: center;
+    font-size: 13px;
+    border: 1px dashed var(--border);
+    border-radius: 9px;
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media (max-width: 1250px) {
+
+    .category-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .category-lists {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 850px) {
+
+    .category-lists {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+
+    .category-item {
+        flex-wrap: wrap;
+    }
+
+    .category-actions {
+        width: 100%;
+        padding-left: 55px;
+    }
+
+    .category-action {
+        flex: 1;
+    }
+
+    .category-list-panel .panel-header {
+        flex-wrap: wrap;
+    }
+
+    .category-layout {
+        gap: 14px;
+    }
+}

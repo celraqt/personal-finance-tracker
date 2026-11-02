@@ -1,0 +1,347 @@
+
+/* =========================================
+   PFT REPORTS & ANALYTICS
+   ========================================= */
+
+/* =========================================
+   FILTER PANEL
+   ========================================= */
+
+.report-filter-panel {
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--surface);
+    padding: 24px;
+    margin-bottom: 34px;
+}
+
+.filter-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.filter-heading h2,
+.report-section-heading h2 {
+    margin: 8px 0 0;
+    font-size: 21px;
+    letter-spacing: -0.4px;
+}
+
+.filter-note {
+    color: var(--muted);
+    font: 10px Consolas, monospace;
+    letter-spacing: 1px;
+}
+
+.report-filters {
+    display: grid;
+    grid-template-columns:
+        minmax(150px, 1.2fr)
+        minmax(145px, 1fr)
+        minmax(145px, 1fr)
+        auto
+        auto;
+    align-items: end;
+    gap: 12px;
+}
+
+.report-field {
+    display: grid;
+    min-width: 0;
+    gap: 9px;
+    color: var(--muted);
+    font: 11px Consolas, monospace;
+    letter-spacing: 0.7px;
+}
+
+.report-field input,
+.report-field select {
+    width: 100%;
+    min-width: 0;
+    height: 45px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2);
+    color: var(--text);
+    font: 13px "Segoe UI", Arial, sans-serif;
+}
+
+.report-field input[type="date"] {
+    color-scheme: dark;
+}
+
+html[data-theme="light"] .report-field input[type="date"] {
+    color-scheme: light;
+}
+
+.report-field select option {
+    background: var(--surface);
+    color: var(--text);
+}
+
+.report-field input:focus,
+.report-field select:focus {
+    border-color: var(--accent);
+}
+
+.report-apply,
+.report-export {
+    height: 45px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+}
+
+.report-apply {
+    color: var(--bg);
+    background: var(--accent);
+    border: 1px solid var(--accent);
+}
+
+html[data-theme="light"] .report-apply {
+    color: #fff;
+}
+
+.report-export {
+    color: var(--text);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+}
+
+.report-apply:hover,
+.report-export:hover {
+    opacity: 0.86;
+}
+
+.report-apply:disabled,
+.report-export:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.report-status {
+    min-height: 18px;
+    margin: 18px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.report-status.error {
+    color: var(--expense);
+}
+
+/* =========================================
+   SECTION HEADING
+   ========================================= */
+
+.report-section-heading {
+    margin-bottom: 20px;
+}
+
+.insight-heading {
+    margin-top: 30px;
+}
+
+.report-transactions-panel {
+    margin-top: 25px;
+}
+
+/* =========================================
+   CHARTS
+   ========================================= */
+
+.report-category-breakdown {
+    display: grid;
+    gap: 15px;
+    margin-top: 22px;
+}
+
+.breakdown-item {
+    display: grid;
+    gap: 7px;
+}
+
+.breakdown-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.breakdown-name {
+    color: var(--text);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.breakdown-amount {
+    color: var(--muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.breakdown-track {
+    height: 5px;
+    border-radius: 99px;
+    background: var(--surface-2);
+    overflow: hidden;
+}
+
+.breakdown-fill {
+    height: 100%;
+    border-radius: 99px;
+}
+
+.breakdown-bottom {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.breakdown-empty {
+    margin: 0;
+    padding: 10px 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+/* =========================================
+   INSIGHTS
+   ========================================= */
+
+.insight-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.insight-card {
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--surface);
+    padding: 23px;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+}
+
+.insight-label {
+    color: var(--muted);
+    font: 10px Consolas, monospace;
+    letter-spacing: 0.7px;
+    line-height: 1.5;
+}
+
+.insight-card strong {
+    color: var(--accent);
+    font-size: clamp(18px, 1.8vw, 27px);
+    font-weight: 800;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+}
+
+.insight-card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+/* =========================================
+   REPORT TRANSACTION TABLE
+   ========================================= */
+
+.report-table-footnote {
+    margin: 20px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media (max-width: 1450px) {
+    .report-filters {
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+    }
+
+    .report-apply,
+    .report-export {
+        width: 100%;
+    }
+}
+
+@media (max-width: 1200px) {
+    .insight-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .report-filters {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .report-field:first-child {
+        grid-column: 1 / -1;
+    }
+
+    .report-apply,
+    .report-export {
+        min-width: 0;
+        white-space: normal;
+    }
+}
+
+@media (max-width: 500px) {
+    .report-filter-panel {
+        padding: 18px;
+    }
+
+    .report-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .report-field:first-child {
+        grid-column: auto;
+    }
+
+    .insight-grid {
+        grid-template-columns: 1fr;
+        gap: 11px;
+    }
+
+    .insight-card {
+        padding: 19px;
+    }
+
+    .filter-heading {
+        flex-wrap: wrap;
+    }
+
+    .report-transactions-panel
+    .transactions-table {
+        min-width: 650px;
+    }
+
+    .report-transactions-panel
+    .panel-header {
+        flex-wrap: wrap;
+    }
+}
