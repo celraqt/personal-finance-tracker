@@ -1,5 +1,9 @@
-
 <?php
+session_start();
+
+require_once __DIR__ . "/../config/finance-access.php";
+pftRequireFinanceUser(true);
+
 session_start();
 
 header("Content-Type: application/json; charset=utf-8");

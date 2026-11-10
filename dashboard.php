@@ -1,4 +1,3 @@
-
 <?php
 session_start();
 
@@ -6,6 +5,68 @@ session_start();
 if (empty($_SESSION["user_id"])) {
     header("Location: login.php");
     exit;
+}
+
+// Check the logged-in user's role
+try {
+    $pdo = require __DIR__ . "/config/database.php";
+
+    $roleStmt = $pdo->prepare(
+        "SELECT role, account_status FROM users WHERE user_id = ? LIMIT 1"
+    );
+
+    $roleStmt->execute([(int) $_SESSION["user_id"]]);
+
+    
+    $account = $roleStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (
+        !$account ||
+        $account["account_status"] !== "active"
+    ) {
+        http_response_code(403);
+        exit("Account access is unavailable.");
+    }
+
+    $role = $account["role"];
+
+
+    // Administrators use the Admin Dashboard
+    if ($role === "admin") {
+        header("Location: admin.php");
+        exit;
+    }
+
+    // Only regular users can access this dashboard
+    if ($role !== "user") {
+        http_response_code(403);
+        exit("Access denied.");
+    }
+
+} catch (Throwable $e) {
+    error_log("PFT dashboard authorization failed.");
+    http_response_code(500);
+    exit("Unable to load dashboard.");
+}
+
+
+
+/* Check if the logged-in account is an administrator */
+$isAdmin = false;
+
+try {
+    $pdo = require __DIR__ . "/config/database.php";
+
+    $stmt = $pdo->prepare(
+        "SELECT role FROM users WHERE user_id = ? LIMIT 1"
+    );
+
+    $stmt->execute([(int) $_SESSION["user_id"]]);
+
+    $isAdmin = ($stmt->fetchColumn() === "admin");
+
+} catch (Throwable $e) {
+    error_log("PFT admin role check failed.");
 }
 
 // Logout CSRF token
@@ -85,12 +146,12 @@ $currentMonth = date("Y-m");
             WORKSPACE / 01
         </div>
 
+        
         <nav class="sidebar-nav" aria-label="Main navigation">
 
             <a href="dashboard.php"
-               class="nav-item active"
-               aria-current="page">
-
+            class="nav-item active"
+            aria-current="page">
                 <span class="nav-icon">▦</span>
                 Dashboard
             </a>
@@ -106,13 +167,13 @@ $currentMonth = date("Y-m");
             </a>
 
             <a href="reports.php" class="nav-item">
-                 <span class="nav-icon">▥</span>
-                 Reports
+                <span class="nav-icon">▥</span>
+                Reports
             </a>
 
             <a href="budgets.php" class="nav-item">
-                 <span class="nav-icon">◎</span>
-                 Budgets
+                <span class="nav-icon">◎</span>
+                Budgets
             </a>
 
             <a href="goals.php" class="nav-item">
@@ -121,6 +182,25 @@ $currentMonth = date("Y-m");
             </a>
 
         </nav>
+            
+
+            <?php if ($isAdmin): ?>
+                <a href="admin.php" class="nav-item">
+                    <span class="nav-icon">✦</span>
+                    Admin Dashboard
+                </a>
+            <?php endif; ?>
+
+
+        <?php if ($isAdmin): ?>
+            <a href="admin.php" class="nav-item">
+                <span class="nav-icon">✦</span>
+                Admin Dashboard
+            </a>
+        <?php endif; ?>
+
+        </nav>
+
 
         <div class="sidebar-bottom">
 
@@ -139,7 +219,9 @@ $currentMonth = date("Y-m");
 
                 <div class="user-info">
                     <strong><?= escape($fullName) ?></strong>
-                    <small>PERSONAL ACCOUNT</small>
+                    
+                <small>PERSONAL ACCOUNT</small>
+
                 </div>
 
             </div>

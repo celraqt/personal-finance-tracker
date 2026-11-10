@@ -1,6 +1,10 @@
-
 <?php
 session_start();
+
+
+require_once __DIR__ . "/config/finance-access.php";
+pftRequireFinanceUser();
+
 
 if (empty($_SESSION["user_id"])) {
     header("Location: login.php");
@@ -109,7 +113,7 @@ $firstName = explode(" ", trim($fullName))[0];
                 <span class="nav-icon">◈</span>
                 Savings Goals
             </a>
-            
+
         </nav>
 
         <div class="sidebar-bottom">

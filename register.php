@@ -1,23 +1,59 @@
-
 <?php
 session_start();
 
-// Redirect users who are already logged in
+// Redirect already signed-in, active accounts.
 if (isset($_SESSION["user_id"])) {
-    header("Location: dashboard.php");
-    exit;
+    try {
+        $sessionPdo = require __DIR__ . "/config/database.php";
+
+        $sessionStmt = $sessionPdo->prepare(
+            "SELECT role, account_status
+             FROM users
+             WHERE user_id = ?
+             LIMIT 1"
+        );
+
+        $sessionStmt->execute([(int) $_SESSION["user_id"]]);
+        $sessionUser = $sessionStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (
+            $sessionUser &&
+            $sessionUser["account_status"] === "active"
+        ) {
+            if ($sessionUser["role"] === "admin") {
+                header("Location: admin.php");
+                exit;
+            }
+
+            if ($sessionUser["role"] === "user") {
+                header("Location: dashboard.php");
+                exit;
+            }
+        }
+
+        unset(
+            $_SESSION["user_id"],
+            $_SESSION["full_name"]
+        );
+
+    } catch (Throwable $e) {
+        error_log("PFT registration session check failed.");
+        http_response_code(503);
+        exit("Registration temporarily unavailable.");
+    }
 }
 
 // CSRF protection
 if (empty($_SESSION["register_csrf_token"])) {
-    $_SESSION["register_csrf_token"] = bin2hex(random_bytes(32));
+    $_SESSION["register_csrf_token"] =
+        bin2hex(random_bytes(32));
 }
 
 $error = "";
 $name = "";
 $email = "";
 
-// Process registration form
+// Process registration
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $nameInput = $_POST["full_name"] ?? "";
@@ -31,7 +67,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         : "";
 
     $email = is_string($emailInput)
-        ? trim($emailInput)
+        ? strtolower(trim($emailInput))
         : "";
 
     $password = is_string($passwordInput)
@@ -46,52 +82,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         ? $tokenInput
         : "";
 
-        // Validate full name
-        // Require at least two name parts
-        // Allow letters, spaces, periods,
-        // apostrophes, and hyphens
-        // Do not allow numbers
+    // Name must contain at least two parts.
+    // Letters, spaces, apostrophes,
+    // hyphens and periods are allowed.
+    $validName =
+        preg_match('/^.{1,100}$/us', $name) === 1
+        &&
+        preg_match(
+            "/^\p{L}[\p{L}\p{M}.'-]*(?: +\p{L}[\p{L}\p{M}.'-]*)+$/u",
+            $name
+        ) === 1;
 
-        $validName =
-            preg_match('/^.{1,100}$/us', $name) === 1
-            &&
-            preg_match(
-                "/^\p{L}[\p{L}\p{M}.'-]*(?: +\p{L}[\p{L}\p{M}.'-]*)+$/u",
-                $name
-            ) === 1;
-
-    // Password requirements
-    $hasMinLength = preg_match(
-        '/^.{12,}$/us',
-        $password
-    ) === 1;
-
-    $hasUppercase = preg_match(
-        '/\p{Lu}/u',
-        $password
-    ) === 1;
-
-    $hasLowercase = preg_match(
-        '/\p{Ll}/u',
-        $password
-    ) === 1;
-
-    $hasNumber = preg_match(
-        '/\p{N}/u',
-        $password
-    ) === 1;
-
-    $hasSymbol = preg_match(
-        '/[^\p{L}\p{N}\s]/u',
-        $password
-    ) === 1;
-
+    // Password must contain at least
+    // 12 characters, uppercase, lowercase,
+    // a number, and a special character.
     $strongPassword =
-        $hasMinLength &&
-        $hasUppercase &&
-        $hasLowercase &&
-        $hasNumber &&
-        $hasSymbol;
+        preg_match('/^.{12,}$/us', $password) === 1
+        &&
+        preg_match('/\p{Lu}/u', $password) === 1
+        &&
+        preg_match('/\p{Ll}/u', $password) === 1
+        &&
+        preg_match('/\p{N}/u', $password) === 1
+        &&
+        preg_match(
+            '/[^\p{L}\p{N}\s]/u',
+            $password
+        ) === 1;
 
     // Server-side validation
     if (!hash_equals(
@@ -99,7 +116,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $token
     )) {
 
-        $error = "Invalid form request. Please refresh and try again.";
+        $error =
+            "Invalid form request. Please refresh and try again.";
 
         $_SESSION["register_csrf_token"] =
             bin2hex(random_bytes(32));
@@ -115,10 +133,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     } elseif (!$validName) {
 
-        $error = "Full name must contain 2–100 characters. "
-               . "Only letters, spaces, apostrophes, "
-               . "hyphens, and periods are allowed. "
-               . "Numbers are not allowed.";
+        $error =
+            "Full name must contain 2–100 characters. "
+            . "Only letters, spaces, apostrophes, "
+            . "hyphens, and periods are allowed. "
+            . "Numbers are not allowed.";
 
     } elseif (
         strlen($email) > 255 ||
@@ -133,9 +152,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     } elseif (!$strongPassword) {
 
-        $error = "Use at least 12 characters with "
-               . "an uppercase letter, lowercase letter, "
-               . "number, and special character.";
+        $error =
+            "Use at least 12 characters with "
+            . "an uppercase letter, lowercase letter, "
+            . "number, and special character.";
 
     } elseif ($password !== $confirm) {
 
@@ -144,10 +164,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } else {
 
         try {
-
+            // Database connection
             $pdo = require __DIR__ . "/config/database.php";
 
-            // Hash password securely
+            // Secure password hashing
             $hashedPassword = password_hash(
                 $password,
                 PASSWORD_DEFAULT
@@ -155,10 +175,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $pdo->beginTransaction();
 
-            // Register user
+            // Create user directly.
+            // NO EMAIL VERIFICATION REQUIRED.
             $stmt = $pdo->prepare(
                 "INSERT INTO users
-                (full_name, email, password_hash)
+                (
+                    full_name,
+                    email,
+                    password_hash
+                )
                 VALUES (?, ?, ?)"
             );
 
@@ -168,7 +193,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $hashedPassword
             ]);
 
-            $userId = $pdo->lastInsertId();
+            $userId = (int) $pdo->lastInsertId();
 
             // Default financial categories
             $categories = [
@@ -182,22 +207,30 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 ["Other Expense", "expense"]
             ];
 
-            $stmt = $pdo->prepare(
+            $categoryStmt = $pdo->prepare(
                 "INSERT INTO categories
-                (user_id, name, type, is_default)
+                (
+                    user_id,
+                    name,
+                    type,
+                    is_default
+                )
                 VALUES (?, ?, ?, 1)"
             );
 
             foreach ($categories as [$category, $type]) {
-                $stmt->execute([
+
+                $categoryStmt->execute([
                     $userId,
                     $category,
                     $type
                 ]);
             }
 
+            // Save user and categories
             $pdo->commit();
 
+            // Registration completed immediately.
             $_SESSION["register_success"] =
                 "Registration successful! Please log in.";
 
@@ -206,23 +239,35 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             header("Location: login.php");
             exit;
 
-        } catch (PDOException $e) {
+        } catch (Throwable $e) {
 
-            if (isset($pdo) && $pdo->inTransaction()) {
+            if (
+                isset($pdo) &&
+                $pdo instanceof PDO &&
+                $pdo->inTransaction()
+            ) {
                 $pdo->rollBack();
             }
 
-            if ($e->getCode() === "23000") {
+            if (
+                $e instanceof PDOException &&
+                $e->getCode() === "23000"
+            ) {
 
-                $error = "Email is already registered.";
+                $error =
+                    "Email is already registered or "
+                    . "the account could not be created.";
 
             } else {
 
                 error_log(
-                    "Registration error: " . $e->getMessage()
+                    "PFT registration failed: "
+                    . $e->getMessage()
                 );
 
-                $error = "Registration failed. Please try again.";
+                $error =
+                    "Registration is temporarily unavailable. "
+                    . "Please try again.";
             }
         }
     }

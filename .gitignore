@@ -1,14 +1,15 @@
-/config/database.php
-
-
 # Private database configuration
 /config/database.php
+
+# Environment files
 .env
 .env.*
 !.env.example
 
 # Local test files
 /tests/
+/test/
+/test-db.php
 /generate-icons.php
 
 # Database backups
@@ -22,12 +23,7 @@
 # User-uploaded files
 /assets/uploads/
 
-# Local editor and operating system
+# Local editor and operating system files
 .vscode/
 .DS_Store
 Thumbs.db
-
-# Development test files
-/test/
-/tests/
-/test-db.php

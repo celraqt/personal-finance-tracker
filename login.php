@@ -1,25 +1,63 @@
 <?php
 session_start();
 
-// Redirect already logged-in users
+// Redirect already signed-in active users.
 if (isset($_SESSION["user_id"])) {
-    header("Location: dashboard.php");
-    exit;
+    try {
+        $sessionDb = require __DIR__ . "/config/database.php";
+
+        $sessionStmt = $sessionDb->prepare(
+            "SELECT role, account_status
+             FROM users
+             WHERE user_id = ?
+             LIMIT 1"
+        );
+
+        $sessionStmt->execute([(int) $_SESSION["user_id"]]);
+        $sessionUser = $sessionStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (
+            $sessionUser &&
+            $sessionUser["account_status"] === "active"
+        ) {
+            if ($sessionUser["role"] === "admin") {
+                header("Location: admin.php");
+                exit;
+            }
+
+            if ($sessionUser["role"] === "user") {
+                header("Location: dashboard.php");
+                exit;
+            }
+        }
+
+        unset(
+            $_SESSION["user_id"],
+            $_SESSION["full_name"]
+        );
+
+    } catch (Throwable $e) {
+        error_log("PFT login session check failed.");
+        http_response_code(503);
+        exit("Login temporarily unavailable.");
+    }
 }
 
-// Create CSRF token
+// CSRF protection
 if (empty($_SESSION["login_csrf_token"])) {
-    $_SESSION["login_csrf_token"] = bin2hex(random_bytes(32));
+    $_SESSION["login_csrf_token"] =
+        bin2hex(random_bytes(32));
 }
 
 $error = "";
 $email = "";
+$isSuspended = false;
 
 // Registration success message
 $success = $_SESSION["register_success"] ?? "";
 unset($_SESSION["register_success"]);
 
-// Handle login
+// Handle login form
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $emailInput = $_POST["email"] ?? "";
@@ -39,11 +77,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         : "";
 
     // Validate CSRF token
-    if (!hash_equals($_SESSION["login_csrf_token"], $token)) {
+    if (!hash_equals(
+        $_SESSION["login_csrf_token"],
+        $token
+    )) {
 
         $error = "Invalid form request. Please try again.";
 
-        $_SESSION["login_csrf_token"] = bin2hex(random_bytes(32));
+        $_SESSION["login_csrf_token"] =
+            bin2hex(random_bytes(32));
 
     } elseif ($email === "" || $password === "") {
 
@@ -56,13 +98,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } else {
 
         try {
-
-            // Connect to MySQL
+            // Database connection
             $pdo = require __DIR__ . "/config/database.php";
 
-            // Find user
+            // Find user account
             $stmt = $pdo->prepare(
-                "SELECT user_id, full_name, password_hash
+                "SELECT
+                    user_id,
+                    full_name,
+                    password_hash,
+                    role,
+                    account_status
                  FROM users
                  WHERE email = ?
                  LIMIT 1"
@@ -72,38 +118,103 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Verify password
+            // Verify password securely
+            $validPassword = $user !== false
+                && password_verify(
+                    $password,
+                    $user["password_hash"]
+                );
+
+            // Suspended account
             if (
-                $user !== false &&
-                password_verify($password, $user["password_hash"])
+                $validPassword &&
+                $user["account_status"] === "suspended"
             ) {
+
+                session_regenerate_id(true);
+
+                unset(
+                    $_SESSION["user_id"],
+                    $_SESSION["full_name"]
+                );
+
+                // Allow limited account appeal access
+                $_SESSION["suspended_appeal_user_id"] =
+                    (int) $user["user_id"];
+
+                $_SESSION["suspended_appeal_expires"] =
+                    time() + 900;
+
+                unset($_SESSION["appeal_csrf_token"]);
+
+                $isSuspended = true;
+
+                $error = "Your account has been suspended. "
+                    . "You may request an account review.";
+
+            // Successful login
+            } elseif (
+                $validPassword &&
+                $user["account_status"] === "active"
+            ) {
+
+                // Record last successful login
+                try {
+                    $updateLogin = $pdo->prepare(
+                        "UPDATE users
+                         SET last_login_at = NOW()
+                         WHERE user_id = ?"
+                    );
+
+                    $updateLogin->execute([
+                        (int) $user["user_id"]
+                    ]);
+
+                } catch (PDOException $e) {
+                    error_log(
+                        "PFT login timestamp update failed."
+                    );
+                }
 
                 // Prevent session fixation
                 session_regenerate_id(true);
 
-                // Store logged-in user
-                $_SESSION["user_id"] = (int) $user["user_id"];
-                $_SESSION["full_name"] = $user["full_name"];
+                // Store authenticated account
+                $_SESSION["user_id"] =
+                    (int) $user["user_id"];
 
-                // Remove used CSRF token
-                unset($_SESSION["login_csrf_token"]);
+                $_SESSION["full_name"] =
+                    $user["full_name"];
 
-                // Redirect to dashboard
-                header("Location: dashboard.php");
+                // Clear temporary session values
+                unset(
+                    $_SESSION["login_csrf_token"],
+                    $_SESSION["suspended_appeal_user_id"],
+                    $_SESSION["suspended_appeal_expires"],
+                    $_SESSION["appeal_csrf_token"]
+                );
+
+                // Redirect based on account role
+                if ($user["role"] === "admin") {
+                    header("Location: admin.php");
+                } else {
+                    header("Location: dashboard.php");
+                }
+
                 exit;
 
             } else {
 
                 $error = "Invalid email or password.";
-
             }
 
         } catch (PDOException $e) {
 
-            error_log("Login error: " . $e->getMessage());
+            error_log(
+                "Login error: " . $e->getMessage()
+            );
 
             $error = "Login is temporarily unavailable.";
-
         }
     }
 }
@@ -115,8 +226,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <head>
     <meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <meta name="theme-color" content="#111514">
 
@@ -133,19 +246,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <main class="auth-shell">
 
-    <!-- ===================================
-         LEFT PANEL: PFT BRANDING
-         =================================== -->
-
+    <!-- LEFT PANEL: BRANDING -->
     <section class="brand-panel">
 
-        <!-- Logo -->
         <div class="brand-top">
 
             <a href="login.php" class="brand-logo">
-                <img src="assets/images/pftlogo.png"
+                <img
+                    src="assets/images/pftlogo.png"
                     alt="Personal Finance Tracker Logo"
-                    class="pft-logo">
+                    class="pft-logo"
+                >
             </a>
 
             <span class="micro-label">
@@ -154,7 +265,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         </div>
 
-        <!-- Main Branding Content -->
         <div>
 
             <p class="eyebrow">
@@ -175,7 +285,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </p>
 
             <!-- Decorative Financial Signal -->
-            <div class="signal-display" aria-hidden="true">
+            <div
+                class="signal-display"
+                aria-hidden="true"
+            >
 
                 <div class="signal-heading">
 
@@ -222,7 +335,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         </div>
 
-        <!-- Branding Footer -->
         <div class="brand-bottom">
 
             <span>
@@ -237,11 +349,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     </section>
 
-
-    <!-- ===================================
-         RIGHT PANEL: LOGIN FORM
-         =================================== -->
-
+    <!-- RIGHT PANEL: LOGIN -->
     <section class="form-panel">
 
         <div class="form-inner">
@@ -272,34 +380,47 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <!-- Registration Success -->
             <?php if (!empty($success)): ?>
 
-                <div class="alert alert-success" role="status">
-
+                <div
+                    class="alert alert-success"
+                    role="status"
+                >
                     <?= htmlspecialchars(
                         $success,
                         ENT_QUOTES,
                         "UTF-8"
                     ) ?>
-
                 </div>
 
             <?php endif; ?>
 
-
             <!-- Login Error -->
             <?php if (!empty($error)): ?>
 
-                <div class="alert alert-error" role="alert">
-
+                <div
+                    class="alert alert-error"
+                    role="alert"
+                >
                     <?= htmlspecialchars(
                         $error,
                         ENT_QUOTES,
                         "UTF-8"
                     ) ?>
-
                 </div>
 
             <?php endif; ?>
 
+            <!-- Suspended Account Appeal -->
+            <?php if ($isSuspended): ?>
+
+                <p class="switch-page">
+                    Think your suspension was a mistake?
+
+                    <a href="account-appeal.php">
+                        Request Account Review
+                    </a>
+                </p>
+
+            <?php endif; ?>
 
             <!-- Login Form -->
             <form
@@ -318,7 +439,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         "UTF-8"
                     ) ?>"
                 >
-
 
                 <!-- Email Address -->
                 <div class="field">
@@ -343,7 +463,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     >
 
                 </div>
-
 
                 <!-- Password -->
                 <div class="field">
@@ -376,7 +495,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 </div>
 
-
                 <!-- Login Button -->
                 <button
                     type="submit"
@@ -389,7 +507,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             </form>
 
-
             <!-- Registration Link -->
             <p class="switch-page">
 
@@ -401,14 +518,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             </p>
 
-
             <!-- Form Footer -->
             <p class="form-footer">
-
                 SECURE SIGN-IN
                 &bull;
                 PERSONAL FINANCE TRACKER
-
             </p>
 
         </div>
